@@ -8,8 +8,8 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d0f11;color:#e8e4da;font-family:'IBM Plex Mono',monospace;min-height:100vh;display:flex;justify-content:center;padding:5vh 4vw}
-.wrap{width:640px;max-width:100%}
-h1{font-family:'Space Grotesk';font-size:30px;letter-spacing:.18em}
+.wrap{width:680px;max-width:100%}
+h1{font-family:'Space Grotesk';font-size:28px;letter-spacing:.18em}
 h1 b{color:#e08a3c}
 .sub{font-size:9px;letter-spacing:.34em;color:#8f959c;margin:4px 0 26px}
 h2{font-family:'Space Grotesk';font-size:13px;letter-spacing:.22em;color:#f0b06a;margin:26px 0 10px;border-bottom:1px solid #23262a;padding-bottom:5px}
@@ -25,51 +25,123 @@ textarea{width:100%;background:#0a0c0e;color:#cfe4d0;border:1px solid #2b2f34;pa
 .btn:hover{background:#1a1712}
 .btn.dim{color:#8f959c;border-color:#2b2f34}
 .btn.red{color:#e07a6a;border-color:#4a2320}
+.btn.green{color:#7ee06a;border-color:#2a5a3a}
 .note{font-size:9.5px;color:#7d838a;line-height:1.6;margin-top:8px}
 .status{font-size:10px;color:#7ee06a;margin-top:8px;letter-spacing:.06em}
+.hint{background:#141a20;border-left:3px solid #e08a3c;padding:10px 14px;margin:14px 0;font-size:10.5px;line-height:1.6;color:#b9b2a4}
 .wentry{display:flex;align-items:center;gap:8px;border:1px solid #23262a;padding:8px 10px;margin-bottom:6px;background:#0d0f11}
 .wentry .winfo{flex:1}
 .wentry .wnm{font-size:12px;color:#e8e4da}
 .wentry .wmeta{font-size:9px;color:#7d838a;margin-top:2px}
 .wentry .wbtn{font-size:10px;letter-spacing:.12em;padding:5px 9px;border:1px solid #3a3226;color:#f0b06a;cursor:pointer}
 .wentry .wbtn.red{border-color:#4a2320;color:#e07a6a}
+.wentry .wbtn.green{border-color:#2a5a3a;color:#7ee06a}
+.wentry .wbtn:hover{background:#1a1712}
+.tabs{display:flex;gap:4px;margin-bottom:14px}
+.tab{flex:1;text-align:center;font-size:10px;letter-spacing:.14em;color:#8f959c;padding:8px 2px;border:1px solid #2b2f34;background:rgba(13,15,17,.7);cursor:pointer;user-select:none}
+.tab:hover{color:#e8e4da}
+.tab.sel{color:#f0b06a;border-color:#e08a3c}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
  <h1>OHMWORKS <b>PATCH STUDIO</b></h1>
- <div class="sub">PUBLISH UPDATES &amp; ADDONS FOR THE GAME</div>
+ <div class="sub">DEVELOPER TOOLS FOR THE ENGINE</div>
 
- <div class="card">
-  <h2 style="margin-top:0">PUBLISH GAME UPDATE</h2>
-  <div class="mrow"><label>GAME FILE (.html)</label><input type="file" id="gfile" accept=".html,.txt"></div>
-  <div class="mrow"><label>VERSION</label><input type="number" id="uver" min="1" step="1" placeholder="12"></div>
-  <div class="mrow"><label>NOTE</label><input type="text" id="unote" maxlength="60" placeholder="what changed"></div>
-  <div class="btn" id="send">SEND UPDATE</div>
-  <div class="btn dim" id="dlpub">DOWNLOAD PUBLISHED BUILD</div>
-  <div class="status" id="ustatus"></div>
-  <div class="note">The update is pushed to every game running in this browser (same origin). Players see an UPDATE banner in their ADDONS tab and can download the new build. For other machines, send them the downloaded file.</div>
+ <div class="hint">
+  <b>How this works:</b> This tool shares localStorage with the engine when both are on the same domain.
+  Publish updates → engine sees them in ADDONS tab. Create addons → engine installs them instantly.
+  Share addon .json files or world .json files with other players.
  </div>
 
- <div class="card">
-  <h2 style="margin-top:0">CREATE ADDON</h2>
-  <div class="mrow"><label>ADDON NAME</label><input type="text" id="aname" maxlength="24" placeholder="My Pack"></div>
-  <div class="mrow"><label>PART ID</label><input type="text" id="abid" maxlength="16" placeholder="mygate"></div>
-  <div class="mrow"><label>PART NAME</label><input type="text" id="apname" maxlength="18" placeholder="Double AND"></div>
-  <div class="mrow"><label>SPEC LINE</label><input type="text" id="aspec" maxlength="40" placeholder="out if back AND left"></div>
-  <div style="margin-top:8px"><textarea id="acode" rows="6" placeholder="OUT(IN('back')>0 &amp;&amp; IN('left')>0);">OUT(IN('back')>0 &amp;&amp; IN('left')>0);</textarea></div>
-  <div class="note">Code runs every tick. IN('back'|'left'|'right') reads 0–15 · OUT(bool) drives the front pin · TICK = tick number · MEM = persistent object.</div>
-  <div class="btn" id="pub">PUBLISH ADDON</div>
+ <div class="tabs">
+  <div class="tab sel" data-p="update">UPDATES</div>
+  <div class="tab" data-p="addon">ADDONS</div>
+  <div class="tab" data-p="world">WORLDS</div>
  </div>
 
- <div class="card">
-  <h2 style="margin-top:0">PUBLISHED ADDONS</h2>
-  <div id="adlist"></div>
-  <div class="mrow" style="margin-top:10px"><label>IMPORT .JSON</label><input type="file" id="afile" accept=".json"></div>
-  <div class="note">Published addons appear in the game's ADDONS tab instantly (same browser). Users can also import the exported .json file directly.</div>
+ <!-- UPDATES TAB -->
+ <div id="pane-update">
+  <div class="card">
+   <h2 style="margin-top:0">PUBLISH ENGINE UPDATE</h2>
+   <div class="mrow"><label>ENGINE FILE (.html)</label><input type="file" id="gfile" accept=".html,.txt"></div>
+   <div class="mrow"><label>VERSION</label><input type="number" id="uver" min="1" step="1" placeholder="15"></div>
+   <div class="mrow"><label>NOTE</label><input type="text" id="unote" maxlength="80" placeholder="what changed"></div>
+   <div class="btn" id="send">PUBLISH UPDATE</div>
+   <div class="btn dim" id="dlpub">DOWNLOAD PUBLISHED BUILD</div>
+   <div class="status" id="ustatus"></div>
+   <div class="note">
+    <b>Two ways to update:</b><br>
+    1. This tool publishes to the engine's ADDONS tab (instant, same browser)<br>
+    2. To update for ALL players: also upload the new index.html to GitHub and bump the version in sw.js<br>
+    The service worker handles automatic updates for everyone else.
+   </div>
+  </div>
  </div>
 
- <div class="note" style="margin-top:14px">Sharing works best when both files live in one folder served from one place (e.g. <b>python -m http.server</b>) or in the same browser profile — storage is per-origin. Sandbox previews isolate storage, so use the EXPORT / IMPORT files there.</div>
+ <!-- ADDONS TAB -->
+ <div id="pane-addon" class="hidden">
+  <div class="card">
+   <h2 style="margin-top:0">CREATE ADDON PART</h2>
+   <div class="mrow"><label>ADDON NAME</label><input type="text" id="aname" maxlength="24" placeholder="My Pack"></div>
+   <div class="mrow"><label>PART ID</label><input type="text" id="abid" maxlength="16" placeholder="mygate"></div>
+   <div class="mrow"><label>PART NAME</label><input type="text" id="apname" maxlength="18" placeholder="Double AND"></div>
+   <div class="mrow"><label>SPEC LINE</label><input type="text" id="aspec" maxlength="50" placeholder="out if back AND left"></div>
+   <div style="margin-top:8px"><textarea id="acode" rows="8" placeholder="void setup() { MEM.t = 0; }
+
+void loop() {
+  if (digitalRead('back') && digitalRead('left')) {
+    digitalWrite('out', true);
+  } else {
+    digitalWrite('out', false);
+  }
+}">void setup() { MEM.t = 0; }
+
+void loop() {
+  if (digitalRead('back') && digitalRead('left')) {
+    digitalWrite('out', true);
+  } else {
+    digitalWrite('out', false);
+  }
+}</textarea></div>
+   <div class="note">
+    Arduino-style API: analogRead(pin) · digitalRead(pin) · digitalWrite('out',bool) · analogWrite('out',0-15) ·
+    Serial.println · PX(x,y,color) · CLS() · BUSREAD/BUSWRITE · ROMREAD/ROMWRITE · RAMREAD/RAMWRITE ·
+    millis() · TICK · MEM (persistent object)
+   </div>
+   <div class="btn green" id="pub">PUBLISH ADDON</div>
+   <div class="btn dim" id="testcode">TEST CODE (verify syntax)</div>
+  </div>
+  <div class="card">
+   <h2 style="margin-top:0">ADDON LIBRARY</h2>
+   <div id="adlist"></div>
+   <div style="display:flex;gap:6px;margin-top:10px">
+    <div class="btn imp" id="adimp" style="flex:1;margin-top:0;padding:8px;font-size:10px">IMPORT ADDON (.json)</div>
+   </div>
+   <input type="file" id="adfile" accept=".json" style="display:none">
+   <div class="note">Published addons appear in the engine's ADDONS tab with Install/Uninstall buttons. Share .json files with friends — they can import and install them too.</div>
+  </div>
+ </div>
+
+ <!-- WORLDS TAB -->
+ <div id="pane-world" class="hidden">
+  <div class="card">
+   <h2 style="margin-top:0">WORLD TOOLS</h2>
+   <div class="note" style="margin:0 0 10px">These are worlds stored in THIS browser. Export them as .json files to share or back up.</div>
+   <div id="wlist"></div>
+   <div style="display:flex;gap:6px;margin-top:10px">
+    <div class="btn dim" id="wimp" style="flex:1;margin-top:0;padding:8px;font-size:10px">IMPORT WORLD (.json)</div>
+   </div>
+   <input type="file" id="wfile" accept=".json" style="display:none">
+   <div class="note">World files contain all blocks, components, and their state. Share circuit builds with friends!</div>
+  </div>
+ </div>
+
+ <div class="note" style="margin-top:14px;text-align:center">
+  OHMWORKS Patch Studio v2 · Works with engine v14b+<br>
+  Must be on the same domain as the engine for localStorage sharing.
+ </div>
 </div>
 
 <script>
@@ -78,60 +150,63 @@ var store=(function(){try{var t='__ps';localStorage.setItem(t,'1');localStorage.
  catch(e){var m=new Map();return{getItem:function(k){return m.has(k)?m.get(k):null;},
   setItem:function(k,v){m.set(k,String(v));},removeItem:function(k){m.delete(k);},__mem:true};}})();
 function esc(s){return String(s==null?'':s).replace(/[<>]/g,'');}
-var gameHtml=null;
 
+/* Tabs */
+document.querySelectorAll('.tab').forEach(function(t){
+ t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('sel');});
+ t.classList.add('sel');
+ var p=t.dataset.p;
+ ['update','addon','world'].forEach(function(x){
+  document.getElementById('pane-'+x).classList.toggle('hidden',x!==p);});
+ if(p==='addon')refreshA();
+ if(p==='world')refreshW();
+ refreshU();});
+});
+
+/* Update publishing */
+var gameHtml=null;
 document.getElementById('gfile').addEventListener('change',function(e){
  var f=e.target.files&&e.target.files[0];if(!f)return;
  var r=new FileReader();
  r.onload=function(){gameHtml=r.result;
-  document.getElementById('ustatus').textContent='Loaded '+(gameHtml.length/1024).toFixed(0)+' KB — ready to send.';};
+  document.getElementById('ustatus').textContent='Loaded '+(gameHtml.length/1024).toFixed(0)+' KB — ready to publish.';};
  r.readAsText(f);});
 
 function refreshU(){
  var u=null;try{u=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
  var has=!!store.getItem('ow-studio-game');
  document.getElementById('ustatus').textContent=u
-  ?('Published: v'+u.ver+' · '+new Date(u.ts).toLocaleString()+' · '+esc(u.note||'')+' · '+(has?'game stored':'no game file'))
+  ?('Published: v'+u.ver+' · '+new Date(u.ts).toLocaleString()+' · '+esc(u.note||'')+' · '+(has?'engine stored':'no engine file stored'))
   :'No update published yet.';}
 
 document.getElementById('send').addEventListener('click',function(){
  var ver=parseInt(document.getElementById('uver').value,10);
- if(!ver||ver<1){alert('Enter a version number (e.g. 12)');return;}
+ if(!ver||ver<1){alert('Enter a version number (e.g. 15)');return;}
  if(!gameHtml&&!store.getItem('ow-studio-game')){
-  var cur=null;try{cur=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
-  if(!(cur&&store.getItem('ow-studio-game'))){alert('Load the updated game .html file first.');return;}}
+  alert('Load the updated engine .html file first.');return;}
  if(gameHtml){
-  try{store.setItem('ow-studio-game',gameHtml);}catch(e){alert('Storage full — game file too large to keep. Use DOWNLOAD PUBLISHED BUILD to share instead.');return;}}
- try{store.setItem('ow-studio-update',JSON.stringify({ver:ver,note:document.getElementById('unote').value.trim(),ts:Date.now()}));}catch(e){}
+  try{store.setItem('ow-studio-game',gameHtml);}catch(e){
+   alert('Storage full — engine file too large. Use DOWNLOAD to share instead.');return;}}
+ try{store.setItem('ow-studio-update',JSON.stringify({
+  ver:ver,
+  note:document.getElementById('unote').value.trim(),
+  ts:Date.now()}));}catch(e){}
  refreshU();refreshA();
- alert('Update v'+ver+' published. Games open in this browser will show it in the ADDONS tab.');});
+ alert('Update v'+ver+' published.\n\nPlayers on this domain will see it in the engine\'s ADDONS tab.');});
 
 document.getElementById('dlpub').addEventListener('click',function(){
  var g=store.getItem('ow-studio-game');
- if(!g){alert('No published game stored. Load the game file and press SEND UPDATE first.');return;}
+ if(!g){alert('No published engine stored. Load the file and press PUBLISH first.');return;}
  var u=null;try{u=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
  var a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([g],{type:'text/html'}));
  a.download='ohmworks-v'+(u?u.ver:'')+'.html';a.click();});
 
-function refreshA(){
- var list=document.getElementById('adlist');
- var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(e){}
- if(!Array.isArray(ads))ads=[];
- if(!ads.length){list.innerHTML='<div class="note" style="text-align:center">No addons published yet.</div>';return;}
- list.innerHTML='';
- ads.forEach(function(ad,i){
-  var d=document.createElement('div');d.className='wentry';
-  d.innerHTML='<div class="winfo"><div class="wnm">'+esc(ad.name||ad.id)+'</div>'+
-   '<div class="wmeta">'+((ad.parts||[]).length)+' part(s) · '+esc(ad.id)+'</div></div>'+
-   '<div class="wbtn exp">EXPORT</div><div class="wbtn red rm">REMOVE</div>';
-  d.querySelector('.exp').onclick=function(){
-   var a=document.createElement('a');
-   a.href=URL.createObjectURL(new Blob([JSON.stringify(ad,null,1)],{type:'application/json'}));
-   a.download=(ad.id||'addon')+'.json';a.click();};
-  d.querySelector('.rm').onclick=function(){
-   ads.splice(i,1);store.setItem('ow-addons',JSON.stringify(ads));refreshA();};
-  list.appendChild(d);});}
+/* Addon creation */
+function getAddons(){var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(e){}
+ if(!Array.isArray(ads))ads=[];return ads;}
+function saveAddons(ads){store.setItem('ow-addons',JSON.stringify(ads));}
 
 document.getElementById('pub').addEventListener('click',function(){
  var bid=document.getElementById('abid').value.trim();
@@ -141,29 +216,157 @@ document.getElementById('pub').addEventListener('click',function(){
  var code=document.getElementById('acode').value;
  if(!bid||!code){alert('Part ID and code are required.');return;}
  if(!/^[a-z0-9_]+$/i.test(bid)){alert('Part ID: letters/numbers/underscores only.');return;}
- var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(e){}
- if(!Array.isArray(ads))ads=[];
+ var ads=getAddons();
  ads=ads.filter(function(a){return a.id!==name;});
  ads.push({id:name,parts:[{bid:bid,name:pname,spec:spec,code:code}]});
- try{store.setItem('ow-addons',JSON.stringify(ads));}catch(e){alert('Storage full.');return;}
- refreshA();
- alert('Addon published — it now appears in the game\'s ADDONS tab (catalog → ADDONS).');});
+ saveAddons(ads);
 
-document.getElementById('afile').addEventListener('change',function(e){
+ /* Auto-install */
+ var inst=getInstalled();
+ inst.add(name);
+ saveInstalled(inst);
+
+ refreshA();
+ alert('Addon "'+name+'" published and auto-installed.\n\nIt now appears in the engine\'s ADDONS tab and catalog.');});
+
+document.getElementById('testcode').addEventListener('click',function(){
+ var code=document.getElementById('acode').value;
+ try{
+  /* Basic Arduino syntax check - convert and try to parse */
+  var js=code
+   .replace(/\bvoid\s+(\w+)\s*\(/g,'function $1(')
+   .replace(/\bint\s+/g,'var ')
+   .replace(/\bbool\s+/g,'var ')
+   .replace(/\bfloat\s+/g,'var ')
+   .replace(/\bHIGH\b/g,'true')
+   .replace(/\bLOW\b/g,'false');
+  new Function(js);
+  alert('✓ Syntax OK — ready to publish');}
+ catch(e){alert('✗ Syntax error: '+e.message);}});
+
+/* Addon library */
+function getInstalled(){var s=new Set();
+ try{var arr=JSON.parse(store.getItem('ow-addons-installed')||'[]');
+  if(Array.isArray(arr))arr.forEach(function(x){s.add(x);});}catch(e){}
+ return s;}
+function saveInstalled(s){store.setItem('ow-addons-installed',JSON.stringify([...s]));}
+
+function refreshA(){
+ var list=document.getElementById('adlist');
+ var ads=getAddons();
+ var installed=getInstalled();
+ if(!ads.length){
+  list.innerHTML='<div style="text-align:center;margin:18px 0;color:#7d838a;font-size:11px">NO ADDONS — CREATE ONE ABOVE OR IMPORT</div>';
+  return;}
+ list.innerHTML='';
+ ads.forEach(function(ad,i){
+  var d=document.createElement('div');d.className='wentry';
+  var isInst=installed.has(ad.id);
+  d.innerHTML='<div class="winfo"><div class="wnm">'+esc(ad.name||ad.id)+
+   (isInst?' <span style="color:#7ee06a;font-size:9px">· INSTALLED</span>':'')+'</div>'+
+   '<div class="wmeta">'+((ad.parts||[]).length)+' part(s)</div></div>';
+  var btns=document.createElement('div');btns.style.display='flex';btns.style.gap='4px';
+
+  if(isInst){
+   var un=document.createElement('div');un.className='wbtn red';un.textContent='UNINSTALL';
+   un.onclick=function(){installed.delete(ad.id);saveInstalled(installed);refreshA();};
+   btns.appendChild(un);
+  }else{
+   var ins=document.createElement('div');ins.className='wbtn green';ins.textContent='INSTALL';
+   ins.onclick=function(){installed.add(ad.id);saveInstalled(installed);refreshA();};
+   btns.appendChild(ins);
+  }
+
+  var exp=document.createElement('div');exp.className='wbtn';exp.textContent='EXPORT';
+  exp.onclick=function(){
+   var a=document.createElement('a');
+   a.href=URL.createObjectURL(new Blob([JSON.stringify(ad,null,1)],{type:'application/json'}));
+   a.download=(ad.id||'addon')+'.json';a.click();};
+  btns.appendChild(exp);
+
+  var del=document.createElement('div');del.className='wbtn red';del.textContent='DELETE';
+  del.onclick=function(){ads.splice(i,1);saveAddons(ads);refreshA();};
+  btns.appendChild(del);
+
+  d.appendChild(btns);
+  list.appendChild(d);});}
+
+document.getElementById('adimp').onclick=function(){document.getElementById('adfile').click();};
+document.getElementById('adfile').addEventListener('change',function(e){
  var f=e.target.files&&e.target.files[0];if(!f)return;
  var r=new FileReader();
  r.onload=function(){
   try{var ad=JSON.parse(r.result);
-   if(!ad.id||!Array.isArray(ad.parts))throw 0;
-   var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(_){}
+   if(!ad.id||!Array.isArray(ad.parts)||!ad.parts.length)throw 0;
+   var ads=getAddons();
    ads=ads.filter(function(a){return a.id!==ad.id;});
-   ads.push(ad);store.setItem('ow-addons',JSON.stringify(ads));refreshA();
-  }catch(err){alert('Invalid addon file.');}};
+   ads.push(ad);saveAddons(ads);
+   var inst=getInstalled();inst.add(ad.id);saveInstalled(inst);
+   refreshA();
+   alert('Addon imported & installed: '+ad.name);
+  }catch(e){alert('Invalid addon file.');}};
  r.readAsText(f);});
 
-refreshU();refreshA();
-if(store.__mem)document.querySelector('.wrap').insertAdjacentHTML('beforeend',
- '<div class="note" style="color:#e07a6a;margin-top:10px">⚠ Storage is sandboxed in this preview — publishing works in-memory only. Open this file directly in a browser to publish for real.</div>');
+/* World tools */
+function refreshW(){
+ var list=document.getElementById('wlist');
+ var worlds=[];try{worlds=JSON.parse(store.getItem('ow-worlds')||'[]');}catch(e){}
+ if(!Array.isArray(worlds))worlds=[];
+ if(!worlds.length){
+  list.innerHTML='<div style="text-align:center;margin:14px 0;color:#7d838a;font-size:11px">No worlds in this browser</div>';
+  return;}
+ list.innerHTML='';
+ worlds.forEach(function(w){
+  var d=document.createElement('div');d.className='wentry';
+  d.innerHTML='<div class="winfo"><div class="wnm">'+esc(w.name)+'</div>'+
+   '<div class="wmeta">'+(w.type==='flat'?'FLAT':'NORMAL')+' · seed '+String(w.seed).slice(0,10)+'</div></div>';
+  var btns=document.createElement('div');btns.style.display='flex';btns.style.gap='4px';
+
+  var exp=document.createElement('div');exp.className='wbtn';exp.textContent='EXPORT';
+  exp.onclick=function(){
+   var data=store.getItem('ow-world-'+w.id);
+   if(!data){alert('No save data found for this world.');return;}
+   var a=document.createElement('a');
+   a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+   a.download=String(w.name).replace(/[^a-z0-9]/gi,'_')+'.ohmworks.json';a.click();};
+  btns.appendChild(exp);
+
+  var del=document.createElement('div');del.className='wbtn red';del.textContent='DELETE';
+  del.onclick=function(){
+   if(!confirm('Delete world "'+w.name+'"?'))return;
+   worlds=worlds.filter(function(x){return x.id!==w.id;});
+   store.setItem('ow-worlds',JSON.stringify(worlds));
+   try{store.removeItem('ow-world-'+w.id);}catch(e){}
+   refreshW();};
+  btns.appendChild(del);
+
+  d.appendChild(btns);
+  list.appendChild(d);});}
+
+document.getElementById('wimp').onclick=function(){document.getElementById('wfile').click();};
+document.getElementById('wfile').addEventListener('change',function(e){
+ var f=e.target.files&&e.target.files[0];if(!f)return;
+ var r=new FileReader();
+ r.onload=function(){
+  try{var d=JSON.parse(r.result);
+   if(!d.w||!d.w.name){alert('Invalid world file.');return;}
+   var worlds=[];try{worlds=JSON.parse(store.getItem('ow-worlds')||'[]');}catch(e){}
+   var id=Date.now().toString(36);
+   d.w.id=id;worlds.push(d.w);
+   store.setItem('ow-worlds',JSON.stringify(worlds));
+   var saveData=JSON.parse(r.result);saveData.w.id=id;
+   store.setItem('ow-world-'+id,JSON.stringify(saveData));
+   refreshW();
+   alert('World imported: '+d.w.name);
+  }catch(e){alert('Could not read world file.');}};
+ r.readAsText(f);});
+
+/* Init */
+refreshU();refreshA();refreshW();
+
+if(store.__mem){
+ document.querySelector('.wrap').insertAdjacentHTML('beforeend',
+  '<div style="color:#e07a6a;margin-top:10px;font-size:10px;text-align:center">⚠ Storage is sandboxed in this preview. Open directly in a browser to publish for real.</div>');}
 })();
 </script>
 </body>
