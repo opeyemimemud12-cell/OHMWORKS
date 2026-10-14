@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>SW Fix</title>
+<style>
+body{background:#0d0f11;color:#e8e4da;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}
+</style>
+</head>
+<body>
+<div>
+<h2>Kicking stuck service workers…</h2>
+<p id="msg">Working…</p>
+</div>
+<script>
+(async function(){
+ const msg=document.getElementById('msg');
+ try{
+  if('serviceWorker' in navigator){
+   const regs=await navigator.serviceWorker.getRegistrations();
+   for(const r of regs){
+    await r.unregister();
+    msg.textContent='Unregistered: '+r.scope;
+   }
+  }
+  if('caches' in window){
+   const names=await caches.keys();
+   for(const n of names){
+    await caches.delete(n);
+    msg.textContent='Deleted cache: '+n;
+   }
+  }
+  msg.textContent='Done! Redirecting to engine…';
+  setTimeout(()=>{
+   // Go back to root (the engine)
+   window.location.replace('/OHMWORKS/');
+  },1000);
+ }catch(e){
+  msg.textContent='Error: '+e.message+' — try clearing browser data for this site.';
+ }
+})();
+</script>
+</body>
+</html>
