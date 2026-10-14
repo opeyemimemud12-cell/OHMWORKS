@@ -1,96 +1,89 @@
-/* OHMWORKS Service Worker v14 — FIXED offline caching */
+/* OHMWORKS Service Worker v14b — FIXED: CORS caching for modules */
 
-const VERSION='v14';
+const VERSION='v14b';
 const CACHE_NAME='ohmworks-'+VERSION;
 
-/* Same-origin files: cache normally (no CORS issues) */
-const LOCAL_ASSETS=[
-  './',
-  './index.html',
-  './manifest.json'
-];
+const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const FONT_URL='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap';
 
-/* CDN files: cache with no-cors (opaque responses) */
-const CDN_ASSETS=[
-  'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
-  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap'
-];
-
-/* Install: cache everything we need */
+/* Install: cache everything.
+   CRITICAL FIX: CDN assets are fetched with normal CORS mode (NOT no-cors).
+   Opaque responses cannot be used by dynamic import() — that's what broke it. */
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        const localPromises = LOCAL_ASSETS.map(url =>
-          cache.add(url).catch(() => console.log('cache miss:', url))
-        );
-        const cdnPromises = CDN_ASSETS.map(url =>
-          fetch(url, {mode:'no-cors'})
-            .then(r => cache.put(url, r))
-            .catch(() => console.log('CDN cache miss:', url))
-        );
-        return Promise.allSettled([...localPromises, ...cdnPromises]);
+        const jobs = [
+          cache.add('./').catch(()=>console.log('miss ./')),
+          cache.add('./index.html').catch(()=>console.log('miss index')),
+          cache.add('./manifest.json').catch(()=>console.log('miss manifest')),
+          fetch(THREE_URL)
+            .then(r => cache.put(THREE_URL, r))
+            .catch(()=>console.log('miss three')),
+          fetch(FONT_URL)
+            .then(r => cache.put(FONT_URL, r))
+            .catch(()=>console.log('miss fonts'))
+        ];
+        return Promise.allSettled(jobs);
       })
       .then(() => self.skipWaiting())
   );
 });
 
-/* Activate: clean old versions, claim clients */
+/* Activate: delete the old poisoned cache, take control */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys =>
-        Promise.all(
-          keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-        )
-      )
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-/* Fetch: serve from cache when offline */
+/* Fetch handler */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
   const url = e.request.url;
 
-  /* For page navigation (loading the engine): try network, fall back to cache */
+  /* Page navigation: network first, cache fallback for offline */
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
         .then(r => {
           const copy = r.clone();
-          caches.open(CACHE_NAME).then(c => c.put('./', copy));
+          caches.open(CACHE_NAME).then(c => c.put('./index.html', copy));
           return r;
         })
         .catch(() =>
-          caches.match('./')
-            .then(hit => hit || caches.match('./index.html'))
+          caches.match('./index.html')
+            .then(hit => hit || caches.match('./'))
             .then(hit => hit || caches.match(e.request))
+            .then(hit => hit || Response.error())
         )
     );
     return;
   }
 
-  /* For CDN assets (Three.js, fonts): cache-first */
+  /* Three.js module + fonts + font files: cache-first */
   if (url.includes('cdn.jsdelivr.net') ||
       url.includes('fonts.googleapis.com') ||
       url.includes('fonts.gstatic.com')) {
     e.respondWith(
-      caches.match(e.request)
-        .then(hit => {
-          if (hit) return hit;
-          return fetch(e.request).then(r => {
-            const copy = r.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, copy));
-            return r;
-          });
-        })
+      caches.match(e.request).then(hit => {
+        if (hit) return hit;
+        return fetch(e.request).then(r => {
+          const copy = r.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, copy));
+          return r;
+        });
+      })
     );
     return;
   }
 
-  /* For everything else (same-origin): network-first, cache fallback */
+  /* Everything else (same-origin): network first, cache fallback */
   e.respondWith(
     fetch(e.request)
       .then(r => {
@@ -102,7 +95,6 @@ self.addEventListener('fetch', e => {
   );
 });
 
-/* Allow page to trigger immediate update */
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
