@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OHMWORKS — Patch Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0f11;color:#e8e4da;font-family:'IBM Plex Mono',monospace;min-height:100vh;display:flex;justify-content:center;padding:5vh 4vw}
+.wrap{width:640px;max-width:100%}
+h1{font-family:'Space Grotesk';font-size:30px;letter-spacing:.18em}
+h1 b{color:#e08a3c}
+.sub{font-size:9px;letter-spacing:.34em;color:#8f959c;margin:4px 0 26px}
+h2{font-family:'Space Grotesk';font-size:13px;letter-spacing:.22em;color:#f0b06a;margin:26px 0 10px;border-bottom:1px solid #23262a;padding-bottom:5px}
+.card{background:#101214;border:1px solid #2b2f34;padding:18px 20px;margin-bottom:14px}
+.mrow{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:11px}
+.mrow label{min-width:100px;color:#8f959c;letter-spacing:.1em;font-size:10px}
+.mrow input[type=text],.mrow input[type=number]{flex:1;background:#0a0c0e;border:1px solid #2b2f34;color:#e8e4da;font-family:inherit;font-size:12px;padding:6px 8px;outline:none}
+.mrow input[type=text]:focus{border-color:#e08a3c}
+.mrow select{background:#0a0c0e;border:1px solid #2b2f34;color:#e8e4da;font-family:inherit;font-size:11px;padding:6px}
+input[type=file]{color:#8f959c;font-size:10px}
+textarea{width:100%;background:#0a0c0e;color:#cfe4d0;border:1px solid #2b2f34;padding:10px;font-family:'IBM Plex Mono';font-size:12px;line-height:1.5}
+.btn{display:inline-block;margin-top:12px;text-align:center;font-size:11px;letter-spacing:.26em;color:#f0b06a;cursor:pointer;padding:10px 20px;border:1px solid #3a3226;user-select:none}
+.btn:hover{background:#1a1712}
+.btn.dim{color:#8f959c;border-color:#2b2f34}
+.btn.red{color:#e07a6a;border-color:#4a2320}
+.note{font-size:9.5px;color:#7d838a;line-height:1.6;margin-top:8px}
+.status{font-size:10px;color:#7ee06a;margin-top:8px;letter-spacing:.06em}
+.wentry{display:flex;align-items:center;gap:8px;border:1px solid #23262a;padding:8px 10px;margin-bottom:6px;background:#0d0f11}
+.wentry .winfo{flex:1}
+.wentry .wnm{font-size:12px;color:#e8e4da}
+.wentry .wmeta{font-size:9px;color:#7d838a;margin-top:2px}
+.wentry .wbtn{font-size:10px;letter-spacing:.12em;padding:5px 9px;border:1px solid #3a3226;color:#f0b06a;cursor:pointer}
+.wentry .wbtn.red{border-color:#4a2320;color:#e07a6a}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <h1>OHMWORKS <b>PATCH STUDIO</b></h1>
+ <div class="sub">PUBLISH UPDATES &amp; ADDONS FOR THE GAME</div>
+
+ <div class="card">
+  <h2 style="margin-top:0">PUBLISH GAME UPDATE</h2>
+  <div class="mrow"><label>GAME FILE (.html)</label><input type="file" id="gfile" accept=".html,.txt"></div>
+  <div class="mrow"><label>VERSION</label><input type="number" id="uver" min="1" step="1" placeholder="12"></div>
+  <div class="mrow"><label>NOTE</label><input type="text" id="unote" maxlength="60" placeholder="what changed"></div>
+  <div class="btn" id="send">SEND UPDATE</div>
+  <div class="btn dim" id="dlpub">DOWNLOAD PUBLISHED BUILD</div>
+  <div class="status" id="ustatus"></div>
+  <div class="note">The update is pushed to every game running in this browser (same origin). Players see an UPDATE banner in their ADDONS tab and can download the new build. For other machines, send them the downloaded file.</div>
+ </div>
+
+ <div class="card">
+  <h2 style="margin-top:0">CREATE ADDON</h2>
+  <div class="mrow"><label>ADDON NAME</label><input type="text" id="aname" maxlength="24" placeholder="My Pack"></div>
+  <div class="mrow"><label>PART ID</label><input type="text" id="abid" maxlength="16" placeholder="mygate"></div>
+  <div class="mrow"><label>PART NAME</label><input type="text" id="apname" maxlength="18" placeholder="Double AND"></div>
+  <div class="mrow"><label>SPEC LINE</label><input type="text" id="aspec" maxlength="40" placeholder="out if back AND left"></div>
+  <div style="margin-top:8px"><textarea id="acode" rows="6" placeholder="OUT(IN('back')>0 &amp;&amp; IN('left')>0);">OUT(IN('back')>0 &amp;&amp; IN('left')>0);</textarea></div>
+  <div class="note">Code runs every tick. IN('back'|'left'|'right') reads 0–15 · OUT(bool) drives the front pin · TICK = tick number · MEM = persistent object.</div>
+  <div class="btn" id="pub">PUBLISH ADDON</div>
+ </div>
+
+ <div class="card">
+  <h2 style="margin-top:0">PUBLISHED ADDONS</h2>
+  <div id="adlist"></div>
+  <div class="mrow" style="margin-top:10px"><label>IMPORT .JSON</label><input type="file" id="afile" accept=".json"></div>
+  <div class="note">Published addons appear in the game's ADDONS tab instantly (same browser). Users can also import the exported .json file directly.</div>
+ </div>
+
+ <div class="note" style="margin-top:14px">Sharing works best when both files live in one folder served from one place (e.g. <b>python -m http.server</b>) or in the same browser profile — storage is per-origin. Sandbox previews isolate storage, so use the EXPORT / IMPORT files there.</div>
+</div>
+
+<script>
+(function(){
+var store=(function(){try{var t='__ps';localStorage.setItem(t,'1');localStorage.removeItem(t);return localStorage;}
+ catch(e){var m=new Map();return{getItem:function(k){return m.has(k)?m.get(k):null;},
+  setItem:function(k,v){m.set(k,String(v));},removeItem:function(k){m.delete(k);},__mem:true};}})();
+function esc(s){return String(s==null?'':s).replace(/[<>]/g,'');}
+var gameHtml=null;
+
+document.getElementById('gfile').addEventListener('change',function(e){
+ var f=e.target.files&&e.target.files[0];if(!f)return;
+ var r=new FileReader();
+ r.onload=function(){gameHtml=r.result;
+  document.getElementById('ustatus').textContent='Loaded '+(gameHtml.length/1024).toFixed(0)+' KB — ready to send.';};
+ r.readAsText(f);});
+
+function refreshU(){
+ var u=null;try{u=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
+ var has=!!store.getItem('ow-studio-game');
+ document.getElementById('ustatus').textContent=u
+  ?('Published: v'+u.ver+' · '+new Date(u.ts).toLocaleString()+' · '+esc(u.note||'')+' · '+(has?'game stored':'no game file'))
+  :'No update published yet.';}
+
+document.getElementById('send').addEventListener('click',function(){
+ var ver=parseInt(document.getElementById('uver').value,10);
+ if(!ver||ver<1){alert('Enter a version number (e.g. 12)');return;}
+ if(!gameHtml&&!store.getItem('ow-studio-game')){
+  var cur=null;try{cur=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
+  if(!(cur&&store.getItem('ow-studio-game'))){alert('Load the updated game .html file first.');return;}}
+ if(gameHtml){
+  try{store.setItem('ow-studio-game',gameHtml);}catch(e){alert('Storage full — game file too large to keep. Use DOWNLOAD PUBLISHED BUILD to share instead.');return;}}
+ try{store.setItem('ow-studio-update',JSON.stringify({ver:ver,note:document.getElementById('unote').value.trim(),ts:Date.now()}));}catch(e){}
+ refreshU();refreshA();
+ alert('Update v'+ver+' published. Games open in this browser will show it in the ADDONS tab.');});
+
+document.getElementById('dlpub').addEventListener('click',function(){
+ var g=store.getItem('ow-studio-game');
+ if(!g){alert('No published game stored. Load the game file and press SEND UPDATE first.');return;}
+ var u=null;try{u=JSON.parse(store.getItem('ow-studio-update')||'null');}catch(e){}
+ var a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([g],{type:'text/html'}));
+ a.download='ohmworks-v'+(u?u.ver:'')+'.html';a.click();});
+
+function refreshA(){
+ var list=document.getElementById('adlist');
+ var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(e){}
+ if(!Array.isArray(ads))ads=[];
+ if(!ads.length){list.innerHTML='<div class="note" style="text-align:center">No addons published yet.</div>';return;}
+ list.innerHTML='';
+ ads.forEach(function(ad,i){
+  var d=document.createElement('div');d.className='wentry';
+  d.innerHTML='<div class="winfo"><div class="wnm">'+esc(ad.name||ad.id)+'</div>'+
+   '<div class="wmeta">'+((ad.parts||[]).length)+' part(s) · '+esc(ad.id)+'</div></div>'+
+   '<div class="wbtn exp">EXPORT</div><div class="wbtn red rm">REMOVE</div>';
+  d.querySelector('.exp').onclick=function(){
+   var a=document.createElement('a');
+   a.href=URL.createObjectURL(new Blob([JSON.stringify(ad,null,1)],{type:'application/json'}));
+   a.download=(ad.id||'addon')+'.json';a.click();};
+  d.querySelector('.rm').onclick=function(){
+   ads.splice(i,1);store.setItem('ow-addons',JSON.stringify(ads));refreshA();};
+  list.appendChild(d);});}
+
+document.getElementById('pub').addEventListener('click',function(){
+ var bid=document.getElementById('abid').value.trim();
+ var name=document.getElementById('aname').value.trim()||'My Pack';
+ var pname=document.getElementById('apname').value.trim()||bid;
+ var spec=document.getElementById('aspec').value.trim();
+ var code=document.getElementById('acode').value;
+ if(!bid||!code){alert('Part ID and code are required.');return;}
+ if(!/^[a-z0-9_]+$/i.test(bid)){alert('Part ID: letters/numbers/underscores only.');return;}
+ var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(e){}
+ if(!Array.isArray(ads))ads=[];
+ ads=ads.filter(function(a){return a.id!==name;});
+ ads.push({id:name,parts:[{bid:bid,name:pname,spec:spec,code:code}]});
+ try{store.setItem('ow-addons',JSON.stringify(ads));}catch(e){alert('Storage full.');return;}
+ refreshA();
+ alert('Addon published — it now appears in the game\'s ADDONS tab (catalog → ADDONS).');});
+
+document.getElementById('afile').addEventListener('change',function(e){
+ var f=e.target.files&&e.target.files[0];if(!f)return;
+ var r=new FileReader();
+ r.onload=function(){
+  try{var ad=JSON.parse(r.result);
+   if(!ad.id||!Array.isArray(ad.parts))throw 0;
+   var ads=[];try{ads=JSON.parse(store.getItem('ow-addons')||'[]');}catch(_){}
+   ads=ads.filter(function(a){return a.id!==ad.id;});
+   ads.push(ad);store.setItem('ow-addons',JSON.stringify(ads));refreshA();
+  }catch(err){alert('Invalid addon file.');}};
+ r.readAsText(f);});
+
+refreshU();refreshA();
+if(store.__mem)document.querySelector('.wrap').insertAdjacentHTML('beforeend',
+ '<div class="note" style="color:#e07a6a;margin-top:10px">⚠ Storage is sandboxed in this preview — publishing works in-memory only. Open this file directly in a browser to publish for real.</div>');
+})();
+</script>
+</body>
+</html>
